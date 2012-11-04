@@ -21,10 +21,25 @@ g = open("prolog.parsley").read()
 
 parser = makeGrammar(g, ast_types)
 
-READ = object()
-REF = object()
-STR = object()
-WRITE = object()
+
+class Named(object):
+    """
+    Named for convenience, compare me by identity.
+    """
+
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return "<%s>" % self.name
+
+    __repr__ = __str__
+
+
+READ = Named("read")
+REF = Named("REF")
+STR = Named("STR")
+WRITE = Named("write")
 
 
 def number_term(term):
@@ -119,6 +134,7 @@ class WAM(object):
 
     def __init__(self):
         self.heap = []
+        self.x = {}
         self.pdl = []
 
     def deref(self, address):
@@ -217,9 +233,8 @@ class WAM(object):
 
     # Compiling functions.
 
-    def load(self, instructions):
-        rv = []
+    def run(self, instructions):
         for inst in instructions:
-            method = getattr(self, inst)
-            rv.append((method,) + inst[1:])
-        return rv
+            print "Running instruction:", inst
+            method = getattr(self, inst[0])
+            method(*inst[1:])
