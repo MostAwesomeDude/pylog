@@ -1,9 +1,12 @@
 identifier = spaces? <(letter | '_')+>
 
-params = '(' identifier:head (',' identifier)*:tail ')'
+variable = identifier:i ?(i[0].isupper()) -> Variable(i)
+
+params = '(' (variable | functor):head (',' (variable | functor))*:tail ')'
        -> [head] + tail if tail else [head]
 
-functor = identifier:f params?:p -> (f, p) if p else (f, [])
+functor = identifier:f ?(not f[0].isupper()) params?:p
+        -> Functor(f, tuple(p)) if p else (f, ())
 
 fact = functor:f spaces? '.' -> f
 

@@ -1,17 +1,70 @@
+from collections import deque, namedtuple
+
 from parsley import makeGrammar
+
+
+class Functor(namedtuple("Functor", "name, terms")):
+
+    @property
+    def arity(self):
+        return len(self.terms)
+
+
+Variable = namedtuple("Variable", "name")
+
+ast_types = {
+    "Functor": Functor,
+    "Variable": Variable,
+}
 
 g = open("prolog.parsley").read()
 
-parser = makeGrammar(g, {})
+parser = makeGrammar(g, ast_types)
 
 READ = object()
 REF = object()
 STR = object()
 WRITE = object()
 
+def number_term(term):
+    """
+    Convert a term of functors and variables into a numbered term, returning
+    the register roots.
+    """
 
-def arity(term):
-    return len(term[1])
+    q = deque([term])
+    register = 0
+    registers = {}
+
+    # Breadth-first. Number all of the terms.
+    while q:
+        t = q.pop()
+        if t not in registers:
+            registers[t] = register
+            register += 1
+        if isinstance(t, Functor):
+            for inner in t.terms:
+                if inner not in registers:
+                    q.appendleft(inner)
+                    registers[inner] = register
+                    register += 1
+
+    s = [term]
+    functors = []
+
+    # And now depth-first. Everything is numbered, so just copy out the
+    # numbers and save all of the roots.
+    while s:
+        t = s.pop()
+        for inner in t.terms:
+            if isinstance(inner, Functor):
+                s.append(inner)
+        r = registers[t]
+        t = t._replace(terms=tuple(registers[x] for x in t.terms))
+        functors.append((r, t))
+
+    functors.sort()
+    return functors
 
 
 class WAM(object):
@@ -118,3 +171,49 @@ class WAM(object):
         elif self.mode is WRITE:
             self.heap.append(self.x[i])
         self.s += 1
+
+    # Compiling functions.
+
+    def compile_query(self, term):
+        roots = number_term(term)
+        instructions = []
+        seen = set()
+
+        for register, functor in reversed(roots):
+            if register in seen:
+                instructions.append((self.set_value, register))
+            else:
+                seen.add(register)
+                instructions.append((self.put_structure, (functor.name,
+                    functor.arity), register))
+
+                for register in functor.terms:
+                    if register in seen:
+                        instructions.append((self.set_value, register))
+                    else:
+                        seen.add(register)
+                        instructions.append((self.set_variable, register))
+
+        return instructions
+
+    def compile_program(self, term):
+        roots = number_term(term)
+        instructions = []
+        seen = set()
+
+        for register, functor in roots:
+            if register in seen:
+                instructions.append((self.unify_value, register))
+            else:
+                seen.add(register)
+                instructions.append((self.get_structure, (functor.name,
+                    functor.arity), register))
+
+                for register in functor.terms:
+                    if register in seen:
+                        instructions.append((self.unify_value, register))
+                    else:
+                        seen.add(register)
+                        instructions.append((self.unify_variable, register))
+
+        return instructions
