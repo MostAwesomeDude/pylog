@@ -1,4 +1,0 @@
-pylog
-=====
-
-Prolog in Python

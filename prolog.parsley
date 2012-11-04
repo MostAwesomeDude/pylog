@@ -1,0 +1,12 @@
+identifier = spaces? <(letter | '_')+>
+
+params = '(' identifier:head (',' identifier)*:tail ')'
+       -> [head] + tail if tail else [head]
+
+functor = identifier:f params?:p -> (f, p) if p else (f, [])
+
+fact = functor:f spaces? '.' -> f
+
+rule = functor:f spaces? ':' '-' functor:head (spaces? ',' functor)*:tail
+       spaces? '.'
+     -> f + ([head] + tail if tail else [head],)
