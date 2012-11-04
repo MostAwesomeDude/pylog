@@ -26,6 +26,7 @@ REF = object()
 STR = object()
 WRITE = object()
 
+
 def number_term(term):
     """
     Convert a term of functors and variables into a numbered term, returning
@@ -65,6 +66,52 @@ def number_term(term):
 
     functors.sort()
     return functors
+
+
+def compile_query(term):
+    roots = number_term(term)
+    instructions = []
+    seen = set()
+
+    for register, functor in reversed(roots):
+        if register in seen:
+            instructions.append(("set_value", register))
+        else:
+            seen.add(register)
+            instructions.append(("put_structure",
+                (functor.name, functor.arity), register))
+
+            for register in functor.terms:
+                if register in seen:
+                    instructions.append(("set_value", register))
+                else:
+                    seen.add(register)
+                    instructions.append(("set_variable", register))
+
+    return instructions
+
+
+def compile_program(term):
+    roots = number_term(term)
+    instructions = []
+    seen = set()
+
+    for register, functor in roots:
+        if register in seen:
+            instructions.append(("unify_value", register))
+        else:
+            seen.add(register)
+            instructions.append(("get_structure",
+                (functor.name, functor.arity), register))
+
+            for register in functor.terms:
+                if register in seen:
+                    instructions.append(("unify_value", register))
+                else:
+                    seen.add(register)
+                    instructions.append(("unify_variable", register))
+
+    return instructions
 
 
 class WAM(object):
@@ -174,46 +221,9 @@ class WAM(object):
 
     # Compiling functions.
 
-    def compile_query(self, term):
-        roots = number_term(term)
-        instructions = []
-        seen = set()
-
-        for register, functor in reversed(roots):
-            if register in seen:
-                instructions.append((self.set_value, register))
-            else:
-                seen.add(register)
-                instructions.append((self.put_structure, (functor.name,
-                    functor.arity), register))
-
-                for register in functor.terms:
-                    if register in seen:
-                        instructions.append((self.set_value, register))
-                    else:
-                        seen.add(register)
-                        instructions.append((self.set_variable, register))
-
-        return instructions
-
-    def compile_program(self, term):
-        roots = number_term(term)
-        instructions = []
-        seen = set()
-
-        for register, functor in roots:
-            if register in seen:
-                instructions.append((self.unify_value, register))
-            else:
-                seen.add(register)
-                instructions.append((self.get_structure, (functor.name,
-                    functor.arity), register))
-
-                for register in functor.terms:
-                    if register in seen:
-                        instructions.append((self.unify_value, register))
-                    else:
-                        seen.add(register)
-                        instructions.append((self.unify_variable, register))
-
-        return instructions
+    def load(self, instructions):
+        rv = []
+        for inst in instructions:
+            method = getattr(self, inst)
+            rv.append((method,) + inst[1:])
+        return rv
