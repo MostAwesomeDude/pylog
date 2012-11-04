@@ -226,7 +226,7 @@ class WAM(object):
 
     def unify_value(self, i):
         if self.mode is READ:
-            self.unify(self.x[i], self.s)
+            self.unify(self.x[i][1], self.s)
         elif self.mode is WRITE:
             self.heap.append(self.x[i])
         self.s += 1

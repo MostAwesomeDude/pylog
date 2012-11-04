@@ -2,8 +2,8 @@ from pprint import pprint
 
 from pylog import compile_program, compile_query, parser, WAM
 
-q = parser("f(X, g(X, a))").functor()
-p = parser("f(b, Y)").functor()
+q = parser("p(Z, h(Z, W), f(W))").functor()
+p = parser("p(f(X), h(Y, f(a)), Y)").functor()
 
 q = compile_query(q)
 p = compile_program(p)
