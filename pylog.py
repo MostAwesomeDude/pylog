@@ -184,10 +184,10 @@ class WAM(object):
 
     def put_structure(self, fn, i):
         h = len(self.heap)
+        self.x[i] = REF, h
         ptr = STR, h + 1
         self.heap.append(ptr)
         self.heap.append(fn)
-        self.x[i] = ptr
 
     def set_variable(self, i):
         ptr = REF, len(self.heap)
@@ -198,7 +198,7 @@ class WAM(object):
         self.heap.append(self.x[i])
 
     def get_structure(self, fn, i):
-        addr = self.deref(self.x[i])
+        addr = self.deref(self.x[i][1])
         tag, value = self.heap[addr]
 
         if tag is REF:
@@ -238,3 +238,6 @@ class WAM(object):
             print "Running instruction:", inst
             method = getattr(self, inst[0])
             method(*inst[1:])
+            if self.fail:
+                print "Failed!"
+                break
