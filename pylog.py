@@ -97,19 +97,15 @@ def compile_program(term):
     seen = set()
 
     for register, functor in roots:
-        if register in seen:
-            instructions.append(("unify_value", register))
-        else:
-            seen.add(register)
-            instructions.append(("get_structure",
-                (functor.name, functor.arity), register))
+        instructions.append(("get_structure", (functor.name, functor.arity),
+            register))
 
-            for register in functor.terms:
-                if register in seen:
-                    instructions.append(("unify_value", register))
-                else:
-                    seen.add(register)
-                    instructions.append(("unify_variable", register))
+        for register in functor.terms:
+            if register in seen:
+                instructions.append(("unify_value", register))
+            else:
+                seen.add(register)
+                instructions.append(("unify_variable", register))
 
     return instructions
 
